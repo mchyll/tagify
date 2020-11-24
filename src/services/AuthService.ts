@@ -99,7 +99,7 @@ export default class AuthService implements IAuthService {
 
       // TODO: Check if refresh is rejected
 
-      return accessToken.access_token;
+      return this.accessTokenStore.get().access_token;
     }
   }
 

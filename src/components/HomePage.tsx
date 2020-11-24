@@ -8,9 +8,7 @@ import { auth } from "../services/Services";
 export const HomePage = (props: RouteComponentProps) => {
   const [isAuthorized, setIsAuthorized] = useState(auth.isAuthorized());
 
-  useEffect(() => {
-    auth.onAuthorized.subscribe(() => setIsAuthorized(auth.isAuthorized()));
-  }, []);
+  useEffect(() => auth.onAuthorized.subscribe(() => setIsAuthorized(auth.isAuthorized())), []);
 
   return <Container text>
     <div style={{ wordWrap: "break-word" }}>
