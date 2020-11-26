@@ -1,16 +1,20 @@
-import { IPlaylist, ITrack } from "../types/Playlist";
+import { IPlaylist, ITrack, Playlist } from "../types/Types";
 import { IAuthService } from "./AuthService";
 
 
+const API_BASE_URL = "https://api.spotify.com/v1/";
+
 export default class SpotifyService {
+
   constructor(private authService: IAuthService) {
     authService.onAuthorized.subscribe(() => {
       console.log("SpotifyService was notified that AuthService successfully has authorized");
     });
   }
 
-  private async callEndpoint<T>(url: string, requestInit?: RequestInit): Promise<T> {
+  private async callEndpoint<T>(path: string, requestInit?: RequestInit): Promise<T> {
     const token = await this.authService.getAccessToken();
+    const url = path.indexOf(API_BASE_URL) === 0 ? path : API_BASE_URL + path;
     const res = await fetch(url, {
       ...requestInit,
       headers: {
@@ -18,6 +22,9 @@ export default class SpotifyService {
         "Authorization": `Bearer ${token}`
       }
     });
+    if (!res.ok) {
+      throw new Error(`Fetch error: ${res.status} ${res.statusText}`);
+    }
     const text = await res.text();
     // console.log(`callEndpoint ${url}`, text);
     return JSON.parse(text);
@@ -35,26 +42,30 @@ export default class SpotifyService {
     return result;
   }
 
-  async getPlaylists(): Promise<IPlaylist[]> {
-    const playlists = await this.getPaginatedItems<SpotifyApi.PlaylistObjectSimplified>("https://api.spotify.com/v1/me/playlists");
+  async getCurrentUser() {
+    return await this.callEndpoint<SpotifyApi.UserObjectPrivate>("me");
+  }
+
+  async getPlaylists(): Promise<Playlist[]> {
+    const playlists = await this.getPaginatedItems<SpotifyApi.PlaylistObjectSimplified>("me/playlists");
     return playlists.map(p => ({
-      id: p.id,
-      name: p.name,
+      ...p,
       tracks: [],
       tracksLoaded: false
     }));
   }
 
-  async getPlaylist(id: string): Promise<IPlaylist> {
-    const playlist = await this.callEndpoint<SpotifyApi.PlaylistObjectFull>(`https://api.spotify.com/v1/playlists/${id}?fields=id,name,tracks.href,tracks.items(track(id,name,artists(name)))`);
+  async getPlaylist(id: string): Promise<Playlist> {
+    const playlist = await this.callEndpoint<SpotifyApi.PlaylistObjectFull>(`playlists/${id}`);
     const trackItems = await this.getPaginatedItems<SpotifyApi.PlaylistTrackObject>(playlist.tracks.href);
     return {
-      id: playlist.id,
-      name: playlist.name,
+      ...playlist,
       tracks: trackItems.map(item => ({
-        id: item.track.id,
-        name: item.track.name,
-        artist: item.track.artists.map(a => a.name).join(", ")
+        added_at: item.added_at,
+        added_by: item.added_by,
+        is_local: item.is_local,
+        artist: item.track.artists.map(a => a.name).join(", "),
+        ...item.track
       })),
       tracksLoaded: true
     };

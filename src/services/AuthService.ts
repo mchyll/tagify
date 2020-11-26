@@ -167,7 +167,13 @@ export default class AuthService implements IAuthService {
         "Content-Type": "application/x-www-form-urlencoded"
       }
     });
+    
     const json = await res.json();
+
+    if ("error" in json) {
+      throw new Error("Authorization error: " + json.error);
+    }
+
     this.accessTokenStore.save({
       ...json,
       validUntil: Date.now() / 1000 + json.expires_in

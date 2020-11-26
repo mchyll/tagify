@@ -1,32 +1,62 @@
 import { Action } from "redux";
 import { ThunkAction } from "redux-thunk";
 import { Services } from "../services/Services";
-import { IPlaylist } from "../types/Playlist";
+import { Playlist, Tag, User } from "../types/Types";
 import { RootState } from "./state";
 
+export const SET_CURRENT_USER = "SET_CURRENT_USER";
 export const PLAYLISTS_LOADED = "PLAYLISTS_LOADED";
 export const UPDATE_PLAYLIST = "UPDATE_PLAYLIST";
+export const ADD_TRACK_TAG = "ADD_TRACK_TAG";
 
+type SetCurrentUserAction = Action<typeof SET_CURRENT_USER> & {
+  user: User
+};
 type PlaylistsLoadedAction = Action<typeof PLAYLISTS_LOADED> & {
-  playlists: IPlaylist[]
+  playlists: Playlist[]
 };
 type UpdatePlaylistAction = Action<typeof UPDATE_PLAYLIST> & {
-  playlist: IPlaylist
+  playlist: Playlist
+};
+type AddTrackTagAction = Action<typeof ADD_TRACK_TAG> & {
+  trackId: string,
+  tag: Tag
 };
 
-export type AppAction = PlaylistsLoadedAction | UpdatePlaylistAction;
+export type AppAction = SetCurrentUserAction | PlaylistsLoadedAction | UpdatePlaylistAction | AddTrackTagAction;
 
-type AppThunk<ReturnType = void> = ThunkAction<ReturnType, RootState, typeof Services, AppAction>;
+export type AppThunk<ReturnType = void> = ThunkAction<ReturnType, RootState, typeof Services, AppAction>;
 
-export const playlistsLoaded = (playlists: IPlaylist[]): AppAction => ({
+export const playlistsLoaded = (playlists: Playlist[]): AppAction => ({
   type: PLAYLISTS_LOADED,
   playlists
 })
 
-export const updatePlaylist = (playlist: IPlaylist): AppAction => ({
+export const updatePlaylist = (playlist: Playlist): AppAction => ({
   type: UPDATE_PLAYLIST,
   playlist
 })
+
+export const setCurrentUser = (user: User): AppAction => ({
+  type: SET_CURRENT_USER,
+  user
+})
+
+export const addTrackTag = (trackId: string, tag: Tag): AppAction => ({
+  type: ADD_TRACK_TAG,
+  trackId,
+  tag
+})
+
+export const loadCurrentUser = (): AppThunk => (dispatch, getState, services) => {
+  if (getState().user) {
+    return Promise.resolve();
+  }
+
+  return services.spotify.getCurrentUser()
+    .then(user => dispatch(setCurrentUser(user)))
+    .catch(handleError);
+}
 
 export const loadPlaylists = (): AppThunk => (dispatch, getState, services) => {
   if (getState().playlistsAreLoaded) {
@@ -35,7 +65,8 @@ export const loadPlaylists = (): AppThunk => (dispatch, getState, services) => {
   }
 
   return services.spotify.getPlaylists()
-    .then(playlists => dispatch(playlistsLoaded(playlists)));
+    .then(playlists => dispatch(playlistsLoaded(playlists)))
+    .catch(handleError);
 }
 
 export const loadPlaylistTracks = (id: string): AppThunk => (dispatch, getState, services) => {
@@ -47,5 +78,10 @@ export const loadPlaylistTracks = (id: string): AppThunk => (dispatch, getState,
   }
 
   return services.spotify.getPlaylist(id)
-    .then(playlist => dispatch(updatePlaylist(playlist)));
+    .then(playlist => dispatch(updatePlaylist(playlist)))
+    .catch(handleError);
+}
+
+function handleError(error: any) {
+  console.error("Oops:", error);
 }

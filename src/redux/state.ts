@@ -1,11 +1,17 @@
-import { IPlaylist } from "../types/Playlist";
+import { Playlist, Tag, TrackTagMap } from "../types/Types";
+
 
 export interface RootState {
-  playlists: IPlaylist[];
+  playlists: Playlist[];
   playlistsAreLoaded: boolean;
+  user?: SpotifyApi.UserObjectPrivate;
+  tags: Tag[];
+  trackTags: TrackTagMap;
 }
 
 export const InitRootState: RootState = {
   playlists: [],
-  playlistsAreLoaded: false
+  playlistsAreLoaded: false,
+  tags: [],
+  trackTags: {}
 };
